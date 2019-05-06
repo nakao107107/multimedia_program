@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 import time
 
-
 start = time.time()
 
 #画像読み込み
@@ -21,6 +20,15 @@ n = 12 #周囲の点16点のうち明るさ条件が連続する点の数
 #各画像の特徴量の格納用array
 img1_feature = []
 img2_feature = []
+
+#brightness_status取得部分関数化（多分あとで全体をclass化する）
+def get_brightness_status (target, brighness, t):
+  if target > brightness+t:
+    return "bright"
+  elif target < brightness-t:
+    return "dark"
+  else:
+    return "middle"
 
 # #１枚目の画像に関する処理
 height, width = img.shape
@@ -55,19 +63,20 @@ for x in range(width):
       ]
     )
 
-    #高速化プログラム(本来n>12の時適用)##############################################
+    #高速化プログラム(本来n>12の時適用)#######################################################
     brightness_status_array = [0,0]
 
     for i in [0,4,8,12]:
-      if brightness_around_array[0] > brightness+t:
+      brightness_status = get_brightness_status(brightness_around_array[i], brightness, t)
+      if brightness_status == "bright":
         brightness_status_array[0] += 1 
-      elif brightness_around_array[4] < brightness-t:
+      elif brightness_status == "dark":
         brightness_status_array[1] += 1
 
       #明るい点が2点の場合break
       if not (brightness_status_array[0]>2 or brightness_status_array[1]>2):
         continue
-    ############################################################################
+    ######################################################################################
 
     sequence_num = 0 #連続する数字
     sequence_num_current = 0 #連続する数字の一時保存領域
@@ -75,12 +84,7 @@ for x in range(width):
     brightness_status_before = "middle"
 
     #0部分のbrightness statusをここで定義(あとで関数化)
-    if brightness_around_array[0] > brightness+t:
-      brightness_status_before = "bright"
-    elif brightness_around_array[0] < brightness-t:
-      brightness_status_before = "dark"
-    else:
-      brightness_status_before = "middle"
+    brightness_status_before = get_brightness_status(brightness_around_array[0], brightness, t)
 
     #要素数16に対して32回分計算（最初と最後で連番になっていることを考慮）
     for i in range(32):
@@ -92,12 +96,7 @@ for x in range(width):
         index = i
 
       #0部分のbrightness statusをここで定義(あとで関数化)
-      if brightness_around_array[index] > brightness+t:
-        brightness_status = "bright"
-      elif brightness_around_array[index] < brightness-t:
-        brightness_status = "dark"
-      else:
-        brightness_status = "middle"
+      brightness_status = get_brightness_status(brightness_around_array[index], brightness, t)
 
       #前の要素の明るさが中間値でなく、かつ前の要素と一致する場合
       if brightness_status != "middle" and brightness_status_before == brightness_status:
