@@ -3,10 +3,10 @@
 
 import cv2
 import numpy as np
+import fast
 import time
 
 start = time.time()
-
 #画像読み込み
 img = cv2.imread('1-001-1.jpg', cv2.IMREAD_GRAYSCALE)
 img_raw = cv2.imread('1-001-1.jpg')
@@ -21,112 +21,95 @@ n = 12 #周囲の点16点のうち明るさ条件が連続する点の数
 img1_feature = []
 img2_feature = []
 
-#brightness_status取得部分関数化（多分あとで全体をclass化する）
-def get_brightness_status (target, brighness, t):
-  if target > brightness+t:
-    return "bright"
-  elif target < brightness-t:
-    return "dark"
-  else:
-    return "middle"
+fast1 = fast.FAST(img, t, n)
+img1_feature = fast1.get_img_feature()
 
-# #１枚目の画像に関する処理
-height, width = img.shape
+fast2 = fast.FAST(img2, t, n)
+img2_feature = fast2.get_img_feature()
 
-for x in range(width):
-  for y in range(height):
+# for feature in img1_feature:
+#   x,y,f = feature
+#   cv2.circle(img_raw, (x, y), 1, (0, 0, 255), thickness=-1)
 
-    # #上下左右3ピクセルはアルゴリズムが適用できないのでのぞく
-    if x in [0,1,2,317,318,319] or y in [0,1,2,237,238,239]:
-        continue
-
-    brightness = img[y][x] #基準となる明るさ
-
-    brightness_around_array = np.array(
-      [
-        img[y-3][x],
-        img[y-3][x+1],
-        img[y-2][x+2],
-        img[y-1][x+3],
-        img[y][x+3],
-        img[y+1][x+3],
-        img[y+2][x+2],
-        img[y+3][x+1],
-        img[y+3][x],
-        img[y+3][x-1],
-        img[y+2][x-2],
-        img[y+1][x-3],
-        img[y][x-3],
-        img[y-1][x-3],
-        img[y-2][x-2],
-        img[y-3][x-1]
-      ]
-    )
-
-    #高速化プログラム(本来n>12の時適用)#######################################################
-    brightness_status_array = [0,0]
-
-    for i in [0,4,8,12]:
-      brightness_status = get_brightness_status(brightness_around_array[i], brightness, t)
-      if brightness_status == "bright":
-        brightness_status_array[0] += 1 
-      elif brightness_status == "dark":
-        brightness_status_array[1] += 1
-
-      #明るい点が2点の場合break
-      if not (brightness_status_array[0]>2 or brightness_status_array[1]>2):
-        continue
-    ######################################################################################
-
-    sequence_num = 0 #連続する数字
-    sequence_num_current = 0 #連続する数字の一時保存領域
-    brightness_status ="middle"
-    brightness_status_before = "middle"
-
-    #0部分のbrightness statusをここで定義(あとで関数化)
-    brightness_status_before = get_brightness_status(brightness_around_array[0], brightness, t)
-
-    #要素数16に対して32回分計算（最初と最後で連番になっていることを考慮）
-    for i in range(32):
-
-      #2周目を考慮
-      if i >= 16:
-        index = i - 16
-      else:
-        index = i
-
-      #0部分のbrightness statusをここで定義(あとで関数化)
-      brightness_status = get_brightness_status(brightness_around_array[index], brightness, t)
-
-      #前の要素の明るさが中間値でなく、かつ前の要素と一致する場合
-      if brightness_status != "middle" and brightness_status_before == brightness_status:
-        sequence_num_current += 1
-
-      else: #前の要素と明るさに関する要件が一致しない
-
-        #sequence_numが最大値の場合はsequence_numに移してからリセット
-        if sequence_num_current > sequence_num:
-          sequence_num = sequence_num_current
-          
-        sequence_num_current = 1
-      
-      #brightness_statusの更新
-      brightness_status_before = brightness_status
-
-    if sequence_num > n:
-      cv2.circle(img_raw, (x,y), 1, (255, 0, 0), thickness=1, lineType=cv2.LINE_8, shift=0)
-      img1_feature.append((x,y))
-
-print("process1 finished")
-
-#非最大値抑制を入れる
+# for feature in img2_feature:
+#   x,y,f = feature
+#   cv2.circle(img_raw2, (x, y), 1, (0, 0, 255), thickness=-1)
 
 elapsed_time = time.time() - start
 print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
 
+    
 
-cv2.imshow("result1", img_raw)
+crtical_feature_array = []
 
+min_feature1 = (0,0)
+min_feature2 = (0,0)
+min_diff = 1000000000
+for feature1 in img1_feature:
+  x1,y1,f1 = feature1
+  for feature2 in img2_feature:
+    x2,y2,f2 = feature2
+    brightness_around_array = np.array(
+      [
+        int(img[y1-3][x1]),
+        int(img[y1-3][x1+1]),
+        int(img[y1-2][x1+2]),
+        int(img[y1-1][x1+3]),
+        int(img[y1][x1+3]),
+        int(img[y1+1][x1+3]),
+        int(img[y1+2][x1+2]),
+        int(img[y1+3][x1+1]),
+        int(img[y1+3][x1]),
+        int(img[y1+3][x1-1]),
+        int(img[y1+2][x1-2]),
+        int(img[y1+1][x1-3]),
+        int(img[y1][x1-3]),
+        int(img[y1-1][x1-3]),
+        int(img[y1-2][x1-2]),
+        int(img[y1-3][x1-1])
+      ]
+    )
+
+    brightness_around_array2 = np.array(
+      [
+        int(img2[y2-3][x2]),
+        int(img2[y2-3][x2+1]),
+        int(img2[y2-2][x2+2]),
+        int(img2[y2-1][x2+3]),
+        int(img2[2][x2+3]),
+        int(img2[y2+1][x2+3]),
+        int(img2[y2+2][x2+2]),
+        int(img2[y2+3][x2+1]),
+        int(img2[y2+3][x2]),
+        int(img2[y2+3][x2-1]),
+        int(img2[y2+2][x2-2]),
+        int(img2[y2+1][x2-3]),
+        int(img2[y2][x2-3]),
+        int(img2[y2-1][x2-3]),
+        int(img2[y2-2][x2-2]),
+        int(img2[y2-3][x2-1])
+      ]
+    )
+    diff = np.sum(np.abs(brightness_around_array-brightness_around_array2))
+    if min_diff > diff:
+        min_diff = diff
+        min_feature1 = (x1,y1)
+        min_feature2 = (x2,y2)
+
+print(min_feature1)
+print(min_feature2)
+
+cv2.circle(img_raw, min_feature1, 2, (0, 0, 255), thickness=-1)
+cv2.circle(img_raw2, min_feature2, 2, (0, 0, 255), thickness=-1)
+   
+cv2.imshow("result",img_raw)
+cv2.imshow("result2",img_raw2)
+
+
+
+
+
+    
 k = cv2.waitKey(0)
 if k == 27:         # wait for ESC key to exit
     cv2.destroyAllWindows()
