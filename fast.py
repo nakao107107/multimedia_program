@@ -4,25 +4,20 @@ import cv2
 import numpy as np
 
 class FAST:
-  def __init__(self, img, t, n):
-    self.img = img
-    self.t = t
-    self.n = n
 
-  def get_img_feature(self):
+  def get_img_feature(self, img, t, n):
 
-    img = self.img
     img_feature= []
     height, width = img.shape
 
-    for x in range(width):
-      for y in range(height):
+    for x in xrange(width):
+      for y in xrange(height):
 
-        # #上下左右3ピクセルはアルゴリズムが適用できないのでのぞく
-        if x in [0,1,2,width-3,width-2,width-1] or y in [0,1,2,height-3,height-2,height-1]:
+        # #上下左右10ピクセルは除去（接合時のことを考慮）
+        if x in range(0,15) or x in range(width-15,width) or y in range(0,15) or y in range(height-15,height):
             continue
 
-        brightness = self.img[y][x] #基準となる明るさ
+        brightness = img[y][x] #基準となる明るさ
 
         brightness_around_array = np.array(
           [
@@ -67,7 +62,7 @@ class FAST:
         brightness_status_before = "middle"
 
         #0部分のbrightness statusをここで定義
-        brightness_status_before = self.__get_brightness_status(brightness_around_array[0], brightness, self.t)
+        brightness_status_before = self.__get_brightness_status(brightness_around_array[0], brightness, t)
 
         #要素数16に対して32回分計算（最初と最後で連番になっていることを考慮）
         for i in range(32):
@@ -79,7 +74,7 @@ class FAST:
             index = i
 
           #0部分のbrightness statusをここで定義
-          brightness_status = self.__get_brightness_status(brightness_around_array[index], brightness, self.t)
+          brightness_status = self.__get_brightness_status(brightness_around_array[index], brightness, t)
 
           #前の要素の明るさが中間値でなく、かつ前の要素と一致する場合
           if brightness_status != "middle" and brightness_status_before == brightness_status:
@@ -96,14 +91,13 @@ class FAST:
           #brightness_statusの更新
           brightness_status_before = brightness_status
 
-        if sequence_num > self.n:
+        if sequence_num > n:
           #特徴量を作成
-          feature = np.sum(brightness_around_array-brightness)
-          print(feature)
-          img_feature.append((x,y,feature))
+          img_feature.append((x,y))
 
     print("feature detect process finished")
     return img_feature
+
 
   #brightness_status取得部分
   def __get_brightness_status (self, target, brightness, t):

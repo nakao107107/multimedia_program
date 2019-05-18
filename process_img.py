@@ -7,33 +7,27 @@ import fast
 class ProcessImg:
 
   @classmethod
-  def join_img(self, img1, img2, (width_cros,height_cros)):
+  def join_img(self, img1, img2, img1_feature, img2_feature):
 
     #今回はimg1, img2がカラー画像前提
     height1, width1, color1 = img1.shape
     height2, width2, color2 = img2.shape
 
+    x1, y1 = img1_feature
+    x2, y2 = img2_feature
+
     #画像処理(tmp系の変数名がダサいのであとで改名)#####################################
 
-    #１枚目の画像に関する処理
-    for x in range(width1-width_cros, width1):
-      for y in range(height1-height_cros, height1):
-        img1[y][x] = [0,0,0]
-
-    zero_row = np.zeros((height2-height_cros,width1,3)).astype(np.uint8)
-    img3 = np.concatenate([img1, zero_row],0)
-    zero_col = np.zeros((img3.shape[0],width2-width_cros,3)).astype(np.uint8)
-    img4 = np.concatenate([img3, zero_col],1)
-
-    #2枚目の画像に関する処理
-    zero_row2 = np.zeros((height1-height_cros,width2,3)).astype(np.uint8)
-    img5 = np.concatenate([zero_row2, img2],0)
-    zero_col2 = np.zeros((img5.shape[0],width1-width_cros,3)).astype(np.uint8)
-    img6 = np.concatenate([zero_col2, img5],1)
-
+    base_img = np.zeros((height1+height2, width1+width2, 3)).astype(np.uint8)
+    height,width,color = base_img.shape
+    half_width = int(width/2)
+    half_height = int(height/2)
+    base_img[half_height-y1:half_height+(height1-y1),half_width-x1:half_width+(width1-x1)] = img1
+    base_img[half_height-y2:half_height+(height1-y2),half_width-x2:half_width+(width1-x2)] = img2
+    
     ############################################################################
 
-    return img4 + img6
+    return base_img
 
   @classmethod
   def rotate_img(self, img, angle):
@@ -53,3 +47,15 @@ class ProcessImg:
     u = np.clip((dx + 1) * WID / 2, 0, WID-1).astype('i')
     v = np.clip((dy + 1) * WID / 2, 0, WID-1).astype('i')
     return e_img[v, u]
+
+
+  @classmethod
+  def plot_img_feature(self, img, features):
+
+    for feature in features:
+      cv2.circle(img, feature, 1, (0, 0, 255), thickness=-1)
+    
+    return img
+
+
+  
