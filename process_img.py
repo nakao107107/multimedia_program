@@ -9,14 +9,11 @@ class ProcessImg:
   @classmethod
   def join_img(self, img1, img2, img1_feature, img2_feature):
 
-    #今回はimg1, img2がカラー画像前提
     height1, width1, color1 = img1.shape
     height2, width2, color2 = img2.shape
 
     x1, y1 = img1_feature
     x2, y2 = img2_feature
-
-    #画像処理(tmp系の変数名がダサいのであとで改名)#####################################
 
     base_img = np.zeros((height1+height2, width1+width2, 3)).astype(np.uint8)
     height,width,color = base_img.shape
@@ -24,8 +21,6 @@ class ProcessImg:
     half_height = int(height/2)
     base_img[half_height-y1:half_height+(height1-y1),half_width-x1:half_width+(width1-x1)] = img1
     base_img[half_height-y2:half_height+(height1-y2),half_width-x2:half_width+(width1-x2)] = img2
-    
-    ############################################################################
 
     return base_img
 
